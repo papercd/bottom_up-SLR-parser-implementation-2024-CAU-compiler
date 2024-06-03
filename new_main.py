@@ -196,13 +196,16 @@ tokens = read_input_file("test.txt")
 
 parse_tree_root, error_report = parse_with_error_reporting(tokens)
 if error_report:
-    print("\nError occurred -----------------------")
-    print("Parsing error:")
+    print("\nError occurred -----------------------",end='\n\n')
+    msg_length = len(error_report["message"])
+    print("Parsing error " + "="*msg_length)
     print(error_report['message'])
-    print("Token:", error_report['token'])
+    print("=" * (14+msg_length))
+    print("Token Read:", error_report['token'])
     print("Expected tokens:", error_report['expected_tokens'])
-    print("Context:", error_report['context'])
+    print("Error occured at:", error_report['context'])
 else:
+    print("")
     print("-------------------------- Parse Tree ---------------------------------")
     print("    S'")
 
