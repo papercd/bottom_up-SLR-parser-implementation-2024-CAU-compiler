@@ -42,41 +42,46 @@ new_grammar = {
 }
 
 
-# Initialize SLR table
-generated_slr_table = {
-    'action': {},
-    'goto': {}
-}
 
-terminal_n_non_terminal = []
-action_index = 0
-goto_index = 0
+def create_parsing_table(filename):
 
-# Read the parsing table from CSV
-with open('0604_parsing_table.csv', 'rt', encoding='UTF8') as file:
-    csvFile = csv.reader(file)
-    for i, line in enumerate(csvFile):
-        if i == 0:
-            goto_index = len(line) - 1
-            for j, entry in enumerate(line):
-                if j != 0:
-                    if entry == "$":
-                        action_index = j
-                    terminal_n_non_terminal.append(entry)
-        else:
-            state = i - 1
-            generated_slr_table['action'][state] = {}
-            generated_slr_table['goto'][state] = {}
-            for j, entry in enumerate(line):
-                if j != 0 and entry != "":
-                    if j <= action_index:
-                        generated_slr_table['action'][state][terminal_n_non_terminal[j-1]] = entry
-                    else:
-                        generated_slr_table['goto'][state][terminal_n_non_terminal[j-1]] = int(entry)
+    # Read the parsing table from CSV
+    # Initialize SLR table
+    slr_table = {
+        'action': {},
+        'goto': {}
+    }
+
+    labels = []
+    action_index = 0
+    #goto_index = 0
+    with open(filename, 'rt', encoding='UTF8') as file:
+        csvFile = csv.reader(file)
+        for i, line in enumerate(csvFile):
+            if i == 0:
+                #goto_index = len(line) - 1
+                for j, entry in enumerate(line):
+                    if j != 0:
+                        if entry == "$":
+                            action_index = j
+                        labels.append(entry)
+            else:
+                state = i - 1
+                slr_table['action'][state] = {}
+                slr_table['goto'][state] = {}
+                for j, entry in enumerate(line):
+                    if j != 0 and entry != "":
+                        if j <= action_index:
+                            slr_table['action'][state][labels[j-1]] = entry
+                        else:
+                            slr_table['goto'][state][labels[j-1]] = int(entry)
+        return slr_table
+    
 
 class ParseTreeNode:
-    def __init__(self, node_type):
+    def __init__(self, node_type, value=None):
         self.node_type = node_type
+        self.value = value
         self.children = []
 
 def print_parse_tree(root_node, indent= [0], is_last_child=False):
@@ -126,7 +131,7 @@ def print_stack(stack):
         print(element[1].node_type, ",", element[0], end= '' if i == length-1 else ',')
     print("]")
 
-def parse_with_error_reporting(tokens):
+def parse_with_error_reporting(tokens,slr_table):
     stack = [(0, ParseTreeNode("CODE"))]  # Stack contains state and parse tree node
     index = 0  # Token index
     error_message = None
@@ -137,15 +142,19 @@ def parse_with_error_reporting(tokens):
         print("state: ", state)
         token = tokens[index] if index < len(tokens) else '$'
         print("token: ", token)
-        print("slr_table['action'][state] : ", generated_slr_table['action'][state])
+        print("slr_table['action'][state] : ", slr_table['action'][state])
 
-        if token not in generated_slr_table['action'][state]:
+        if token not in slr_table['action'][state]:
+
             # Syntax error detected
-            expected_tokens = list(generated_slr_table['action'][state].keys())
+            # if the table entry for the token and current state read does not exist, 
+            # then that means there exists a syntax error within the input token sequence.
+
+            expected_tokens = list(slr_table['action'][state].keys())
             error_message = f"Syntax error at token '{token}'. Expected one of: {', '.join(expected_tokens)}"
             break
 
-        action = generated_slr_table['action'][state][token]
+        action = slr_table['action'][state][token]
         print("action: ", action)
 
         if action[0] == 's':  # Shift
@@ -168,7 +177,7 @@ def parse_with_error_reporting(tokens):
                    
           
             
-            next_state = generated_slr_table['goto'][stack[-1][0]][lhs]
+            next_state = slr_table['goto'][stack[-1][0]][lhs]
             stack.append((next_state, new_tree_node))
             print_stack(stack)
 
@@ -191,22 +200,32 @@ def parse_with_error_reporting(tokens):
 
     return None, error_report
 
-tokens = read_input_file("test.txt")
 
-parse_tree_root, error_report = parse_with_error_reporting(tokens)
-if error_report:
-    print("\nError occurred -----------------------",end='\n\n')
-    msg_length = len(error_report["message"])
-    print("Parsing error " + "="*msg_length)
-    print(error_report['message'])
-    print("=" * (14+msg_length))
-    print("Token Read:", error_report['token'])
-    print("Expected tokens:", error_report['expected_tokens'])
-    print("Error occured at token position:", error_report['token_position'])
-    print("Context: ",error_report["context"])
-else:
-    print("")
-    print("-------------------------- Parse Tree ---------------------------------")
-    print("    CODE'")
 
-    print_parse_tree(parse_tree_root,is_last_child=True)
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+
+        print("Usage: python read_file.py <filename>")
+        sys.exit(1)
+
+    token_filename = sys.argv[1]
+    tokens = read_input_file(token_filename)
+    slr_parsing_table = create_parsing_table("parsing_table.csv")
+
+    parse_tree_root, error_report = parse_with_error_reporting(tokens,slr_parsing_table)
+
+    if error_report:
+        print("\nError occurred -----------------------",end='\n\n')
+        msg_length = len(error_report["message"])
+        print("Parsing error " + "="*msg_length)
+        print(error_report['message'])
+        print("=" * (14+msg_length))
+        print("Token Read:", error_report['token'])
+        print("Expected tokens:", error_report['expected_tokens'])
+        print("Error occured at:", error_report['context'])
+    else:
+        print("")
+        print("-------------------------- Parse Tree ---------------------------------")
+        print("    CODE'")
+        print_parse_tree(parse_tree_root,is_last_child=True)
