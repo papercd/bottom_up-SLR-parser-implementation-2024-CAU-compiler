@@ -1,5 +1,8 @@
 # non-ambiguous CFG
+import sys
+import csv 
 
+"""
 grammar = {
     0: ("CODE", ["VDECL", "CODE"]),
     1: ("CODE", ["FDECL", "CODE"]),
@@ -54,8 +57,69 @@ grammar = {
     
     34: ("RETURN", ["return", "RHS", "semi"])
 }
+"""
 
+new_grammar = {
+0: ("CODE", ["CODE_BLOCK"]),
+1: ("CODE", [""]),
 
+2: ("CODE_BLOCK", ["VDECL", "CODE_BLOCK"]),
+3: ("CODE_BLOCK", ["FDECL", "CODE_BLOCK"]),
+4: ("CODE_BLOCK", ["STMT", "CODE_BLOCK"]),
+
+5: ("VDECL", ["vtype", "id", "vdecl_tail", "semi"]),
+
+6: ("vdecl_tail", [""]),
+7: ("vdecl_tail", ["ASSIGN"]),
+
+8: ("ASSIGN", ["id", "assign", "RHS"]),
+
+9: ("RHS", ["EXPR"]),
+10: ("RHS", ["literal"]),
+11: ("RHS", ["character"]),
+12: ("RHS", ["boolstr"]),
+
+13: ("EXPR", ["EXPR", "addsub", "TERM"]),
+14: ("EXPR", ["TERM"]),
+
+15: ("TERM", ["TERM", "multdiv", "FACTOR"]),
+16: ("TERM", ["FACTOR"]),
+
+17: ("FACTOR", ["lparen", "EXPR", "rparen"]),
+18: ("FACTOR", ["id"]),
+19: ("FACTOR", ["num"]),
+
+20: ("FDECL", ["vtype", "id", "lparen", "ARG", "rparen", "lbrace", "BLOCK", "RETURN", "rbrace"]),
+
+21: ("ARG", ["ARG_LIST"]),
+22: ("ARG", [""]),
+
+23: ("ARG_LIST", ["vtype", "id"]),
+24: ("ARG_LIST", ["vtype", "id", "comma", "ARG_LIST"]),
+
+25: ("BLOCK", ["STMT", "BLOCK"]),
+26: ("BLOCK", []),
+
+27: ("STMT", ["VDECL", "semi"]),
+28: ("STMT", ["ASSIGN", "semi"]),
+29: ("STMT", ["IF_STMT"]),
+30: ("STMT", ["WHILE_STMT"]),
+
+31: ("IF_STMT", ["if", "lparen", "COND", "rparen", "lbrace", "BLOCK", "rbrace", "ELSE_STMT"]),
+
+32: ("ELSE_STMT", ["else", "if", "lparen", "COND", "rparen", "lbrace", "BLOCK", "rbrace", "ELSE_STMT"]),
+33: ("ELSE_STMT", ["else", "lbrace", "BLOCK", "rbrace"]),
+
+34: ("WHILE_STMT", ["while", "lparen", "COND", "rparen", "lbrace", "BLOCK", "rbrace"]),
+
+35: ("COND", ["EXPR", "comp", "EXPR"]),
+36: ("COND", ["boolstr"]),
+
+37: ("RETURN", ["return", "RHS", "semi"]),
+
+}
+
+"""
 #SLR parsing table 
 slr_table = {
     'action': {
@@ -112,13 +176,58 @@ slr_table = {
         29: {'FACTOR' : 34}
     }
 }
+"""
+
+action_index = 0 
+goto_index = 0
+generated_slr_table = {
+    'action' : {},
+
+    'goto' : {}
+}
+
+table_entry_dict= {}
+terminal_n_non_terminal = []
+
+#slr table 생성 
+
+with open('parsing table.csv', 'rt', encoding='UTF8') as file:
+    csvFile = csv.reader(file)
+    for i, line in enumerate(csvFile):
+       
+       #무슨 non-terminal과 terminal이 있는지 저장. 
+        if i == 0:
+            goto_index = len(line) - 1
+            for j, entry in enumerate(line):
+                if j != 0:
+                    if entry == "$":
+                        action_index = j
+                    terminal_n_non_terminal.append(entry)
+        else:
+            #나머지 줄을 읽으면서 dictionary 채우기. 
+            state = i - 1
+            generated_slr_table['action'][state] = {}
+            generated_slr_table['goto'][state] = {}
+            for j, entry in enumerate(line):
+                if j != 0 and entry != "":
+                    # action
+                    if j <= action_index:
+                        generated_slr_table['action'][state][terminal_n_non_terminal[j-1]] = entry
+                    # goto
+                    else:
+                        generated_slr_table['goto'][state][terminal_n_non_terminal[j-1]] = int(entry)
+
 
 # read file
-input_file = 'C:/Users/shlee/Desktop/compiler/inputfile.txt'
-with open(input_file, 'r', encoding='utf-8') as file:
+
+with open('test.txt', 'r', encoding='utf-8') as file:
     tokens = file.read().split() # 띄어쓰기 단위로 토큰 분리
 
+
+
+
 # parse input tokens
+
 def parse(tokens):
     stack = [0]  # Stack initially contains the start state
     index = 0  # Start from the first token
@@ -130,12 +239,12 @@ def parse(tokens):
         token = tokens[index] if index < len(tokens) else '$'
         print("token: ", token)
 
-        print("slr_table['action'][state] : ", slr_table['action'][state])
-        if token not in slr_table['action'][state]: # 현재 읽은 토큰이 slr table action에 없을 경우
+        print("slr_table['action'][state] : ", generated_slr_table['action'][state])
+        if token not in generated_slr_table['action'][state]: # 현재 읽은 토큰이 slr table action에 없을 경우
             print(f"Syntax error at token {token}")
             return False
         
-        action = slr_table['action'][state][token]
+        action = generated_slr_table['action'][state][token]
         print("action: ", action)
 
         if action[0] == 's':  # Shift
@@ -145,17 +254,21 @@ def parse(tokens):
             index += 1
 
         elif action[0] == 'r':  # Reduce
-            production = grammar[int(action[1:])]
-            print("prodection: ", production)
+            production = new_grammar[int(action[1:])]
+            print("production: ", production)
             lhs, rhs = production
             
+            #empty string 이 아니면 pop하는 걸로 수정. 
+
             for _ in rhs:
-                stack.pop()
-                stack.pop()
-                print("stack: ", stack)
-            goto_state = slr_table['goto'][stack[-1]][lhs]
+                if _ != "":
+                    stack.pop()
+                    stack.pop()
+                    print("stack: ", stack)
+            goto_state = generated_slr_table['goto'][stack[-1]][lhs]
             stack.append(lhs)
             stack.append(goto_state)
+            print("stack: ", stack)
 
         elif action == 'acc':  # Accept action
             print("Input accepted.")
@@ -164,6 +277,74 @@ def parse(tokens):
         else:
             print(f"Unexpected action {action}")
             return False
+        
+
+
+
+
+"""
+
+
+
+            
+class ParseTreeNode:
+    def __init__(self, node_type, value=None):
+        self.node_type = node_type
+        self.value = value
+        self.children = []
+
+def parse_with_tree(tokens):
+    stack = [(0, ParseTreeNode("CODE"))]  # Stack contains state and parse tree node
+    index = 0  # Token index
+
+    while stack:
+        state, tree_node = stack[-1]
+        print()
+        print("state: ", state)
+        token = tokens[index] if index < len(tokens) else '$'
+        print("token: ", token)
+
+        if token not in generated_slr_table['action'][state]:
+            print(f"Syntax error at token {token}")
+            return None
+
+        action = generated_slr_table['action'][state][token]
+
+        if action[0] == 's':  # Shift
+            next_state = int(action[1:])
+            new_tree_node = ParseTreeNode(token)
+            stack.append((next_state, new_tree_node))
+            index += 1
+            print("stack: ", stack)
+
+        elif action[0] == 'r':  # Reduce
+            production = new_grammar[int(action[1:])]
+            print("production: ", production)
+            lhs, rhs = production
+            new_tree_node = ParseTreeNode(lhs)
+            for _ in rhs:
+                if _ != "":
+                    stack.pop()  # Pop states and tree nodes for the right-hand side symbols
+                    _, child_node = stack.pop()
+                    new_tree_node.children.insert(0, child_node)  # Insert children in reverse order
+                    print("stack: ", stack)
+            # Consult the goto table to find the next state
+            next_state = generated_slr_table['goto'][stack[-1][0]][lhs]
+            stack.append((next_state, new_tree_node))
+            print("stack: ", stack)
+
+        elif action == 'acc':  # Accept action
+            print("Input accepted.")
+            return tree_node
+
+        else:
+            print(f"Unexpected action {action}")
+            return None
+"""
+# Usage
+
+#parse_tree_root = parse_with_tree(tokens)
+
 
 parse(tokens)
 
