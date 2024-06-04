@@ -4,41 +4,41 @@ import csv
 
 # Define grammar
 new_grammar = {
-    0: ("S'", ["CODE"]),
-    1: ("CODE", ["VDECL", "CODE"]),
-    2: ("CODE", ["FDECL", "CODE"]),
-    3: ("CODE", [""]),
-    4: ("VDECL", ["vtype", "id", "semi"]),
-    5: ("VDECL", ["vtype", "ASSIGN", "semi"]),
-    6: ("ASSIGN", ["id", "assign", "RHS"]),
-    7: ("RHS", ["EXPR"]),
-    8: ("RHS", ["literal"]),
-    9: ("RHS", ["character"]),
-    10: ("RHS", ["boolstr"]),
-    11: ("EXPR", ["T_EXPR", "addsub", "EXPR"]),
-    12: ("EXPR", ["T_EXPR"]),
-    13: ("T_EXPR", ["F_EXPR", "multdiv", "T_EXPR"]),
-    14: ("T_EXPR", ["F_EXPR"]),
-    15: ("F_EXPR", ["lparen", "EXPR", "rparen"]),
-    16: ("F_EXPR", ["id"]),
-    17: ("F_EXPR", ["num"]),
-    18: ("FDECL", ["vtype", "id", "lparen", "ARG", "rparen", "lbrace", "BLOCK", "RETURN", "rbrace"]),
-    19: ("ARG", ["vtype", "id", "MOREARGS"]),
-    20: ("ARG", [""]),
-    21: ("MOREARGS", ["comma", "vtype", "id", "MOREARGS"]),
-    22: ("MOREARGS", [""]),
-    23: ("BLOCK", ["STMT", "BLOCK"]),
-    24: ("BLOCK", [""]),
-    25: ("STMT", ["VDECL"]),
-    26: ("STMT", ["ASSIGN", "semi"]),
-    27: ("STMT", ["if", "lparen", "COND", "rparen", "lbrace", "BLOCK", "rbrace", "ELSE"]),
-    28: ("STMT", ["while", "lparen", "COND", "rparen", "lbrace", "BLOCK", "rbrace"]),
-    29: ("COND", ["boolstr", "COND_T"]),
-    30: ("COND_T", ["comp", "boolstr", "COND_T"]),
-    31: ("COND_T", [""]),
-    32: ("ELSE", ["else", "lbrace", "BLOCK", "rbrace"]),
-    33: ("ELSE", [""]),
-    34: ("RETURN", ["return", "RHS", "semi"])
+    0: ("CODE'", ["CODE"]),
+1: ("CODE", ["VDECL", "CODE"]),
+2: ("CODE", ["FDECL", "CODE"]),
+3: ("CODE", [""]),
+4: ("VDECL", ["vtype", "id", "semi"]),
+5: ("VDECL", ["vtype", "ASSIGN", "semi"]),
+6: ("ASSIGN", ["id", "assign", "RHS"]),
+7: ("RHS", ["EXPR"]),
+8: ("RHS", ["literal"]),
+9: ("RHS", ["character"]),
+10: ("RHS", ["boolstr"]),
+11: ("EXPR", ["EXPR", "addsub", "TERM"]),
+12: ("EXPR", ["TERM"]),
+13: ("TERM", ["TERM", "multdiv", "FACTOR"]),
+14: ("TERM", ["FACTOR"]),
+15: ("FACTOR", ["lparen", "EXPR", "rparen"]),
+16: ("FACTOR", ["id"]),
+17: ("FACTOR", ["num"]),
+18: ("FDECL", ["vtype", "id", "lparen", "ARG", "rparen", "lbrace", "BLOCK", "RETURN", "rbrace"]),
+19: ("ARG", ["vtype", "id", "MOREARGS"]),
+20: ("ARG", [""]),
+21: ("MOREARGS", ["comma", "vtype", "id", "MOREARGS"]),
+22: ("MOREARGS", [""]),
+23: ("BLOCK", ["STMT", "BLOCK"]),
+24: ("BLOCK", [""]),
+25: ("STMT", ["VDECL"]),
+26: ("STMT", ["ASSIGN", "semi"]),
+27: ("STMT", ["if", "lparen", "COND", "rparen", "lbrace", "BLOCK", "rbrace", "ELSE"]),
+28: ("STMT", ["while", "lparen", "COND", "rparen", "lbrace", "BLOCK", "rbrace"]),
+29: ("COND", ["boolstr", "COND'"]),
+30: ("COND'", ["comp", "boolstr", "COND'"]),
+31: ("COND'", [""]),
+32: ("ELSE", ["else", "lbrace", "BLOCK", "rbrace"]),
+33: ("ELSE", [""]),
+34: ("RETURN", ["return", "RHS", "semi"]),
 }
 
 
@@ -53,7 +53,7 @@ action_index = 0
 goto_index = 0
 
 # Read the parsing table from CSV
-with open('parsing table.csv', 'rt', encoding='UTF8') as file:
+with open('0604_parsing_table.csv', 'rt', encoding='UTF8') as file:
     csvFile = csv.reader(file)
     for i, line in enumerate(csvFile):
         if i == 0:
@@ -207,6 +207,6 @@ if error_report:
 else:
     print("")
     print("-------------------------- Parse Tree ---------------------------------")
-    print("    S'")
+    print("    CODE'")
 
     print_parse_tree(parse_tree_root,is_last_child=True)
