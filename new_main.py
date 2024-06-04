@@ -75,9 +75,8 @@ with open('parsing table.csv', 'rt', encoding='UTF8') as file:
                         generated_slr_table['goto'][state][terminal_n_non_terminal[j-1]] = int(entry)
 
 class ParseTreeNode:
-    def __init__(self, node_type, value=None):
+    def __init__(self, node_type):
         self.node_type = node_type
-        self.value = value
         self.children = []
 
 def print_parse_tree(root_node, indent= [0], is_last_child=False):
@@ -203,7 +202,8 @@ if error_report:
     print("=" * (14+msg_length))
     print("Token Read:", error_report['token'])
     print("Expected tokens:", error_report['expected_tokens'])
-    print("Error occured at:", error_report['context'])
+    print("Error occured at token position:", error_report['token_position'])
+    print("Context: ",error_report["context"])
 else:
     print("")
     print("-------------------------- Parse Tree ---------------------------------")
